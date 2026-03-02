@@ -2,6 +2,15 @@
 
 Render上で動く、管理業務主任者向けのLINE日次1問ボットです。
 
+## Current Status (2026-03-02)
+
+- Renderデプロイ済み（`/health` 200確認済み）
+- Supabase接続済み
+- LINE Messaging API連携済み（Webhook Verify Success）
+- `follow` イベントで `kanrigyomu_users` への登録確認済み
+- `POST /push/daily` 実行で配信確認済み
+- LINE回答（postback）で `kanrigyomu_answers` 記録・即時返信確認済み
+
 ## Endpoints
 
 - `POST /webhook`
@@ -11,7 +20,7 @@ Render上で動く、管理業務主任者向けのLINE日次1問ボットです
   - `postback(qid,c)` で回答保存・進捗計算・即時返信
 - `POST /push/daily`
   - 日次配信
-  - `daily_assignments(user_id,date)` で冪等性担保
+  - `kanrigyomu_daily_assignments(user_id,date)` で冪等性担保
   - 固定順（`block_number`, `order_index`）で出題
 - `GET /health`
   - ヘルスチェック
@@ -33,6 +42,13 @@ Optional:
 CRON_SECRET=
 DEFAULT_LINE_USER_ID=
 ```
+
+## Supabase Tables
+
+- `kanrigyomu_users`
+- `kanrigyomu_questions`
+- `kanrigyomu_answers`
+- `kanrigyomu_daily_assignments`
 
 ## Local Run
 
@@ -58,6 +74,12 @@ Web Service:
 Cron:
 - 毎日 06:00 JST で `POST https://<your-service>.onrender.com/push/daily`
 - `CRON_SECRET` を設定した場合は `Authorization: Bearer <CRON_SECRET>` を付与
+
+## Next Steps
+
+- Render Cronの定時実行設定（06:00 JST）
+- `kanrigyomu_questions` へ本番問題（120問）投入
+- 必要に応じて `DEFAULT_LINE_USER_ID` を削除（本番は `follow` 登録ユーザー配信が基本）
 
 ## Notes
 
