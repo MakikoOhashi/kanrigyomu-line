@@ -1,73 +1,66 @@
-# Line Study Bot (管理業務主任者)
+# LINE Study Bot (Render + Express + TypeScript)
 
-LINEで毎朝1問を配信し、回答後に即時で正誤と進捗を返す学習ボットです。
+Render上で動く、管理業務主任者向けのLINE日次1問ボットです。
 
-## Stack
+## Endpoints
 
-- Next.js App Router + TypeScript
-- Vercel (API + Cron)
-- Supabase (Postgres)
-- LINE Messaging API
+- `POST /webhook`
+  - LINEのWebhook受信
+  - `x-line-signature` を raw body で検証
+  - `follow` でユーザー登録
+  - `postback(qid,c)` で回答保存・進捗計算・即時返信
+- `POST /push/daily`
+  - 日次配信
+  - `daily_assignments(user_id,date)` で冪等性担保
+  - 固定順（`block_number`, `order_index`）で出題
+- `GET /health`
+  - ヘルスチェック
 
-## 実装済みAPI
-
-- `POST /api/webhook`
-  - `x-line-signature` を `HMAC-SHA256 + Base64` で検証
-  - `follow` を受けてユーザー登録
-  - `postback (qid,c)` を受けて回答保存・進捗更新・即時返信
-- `POST /api/push/daily`
-  - JST日付で `daily_assignments(user_id,date)` を使った冪等配信
-  - 固定順 (`block_number`, `order_index`) で問題決定
-  - ブロック末尾で正答率70%以上なら次ブロック、未満なら同ブロック再周回
-
-## 必須環境変数
+## Required Environment Variables
 
 ```bash
+PORT=3000
+TZ=Asia/Tokyo
 LINE_CHANNEL_ACCESS_TOKEN=
 LINE_CHANNEL_SECRET=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-任意:
+Optional:
 
 ```bash
-# Cronエンドポイント保護（設定時のみ必須化）
 CRON_SECRET=
-# usersが空の場合の初期配信先
 DEFAULT_LINE_USER_ID=
 ```
 
-## DBセットアップ
-
-Supabase SQL Editorで次を実行:
-
-- `db/schema.sql`
-
-テーブル:
-
-- `users`
-- `questions`
-- `answers`
-- `daily_assignments`
-
-## Vercel Cron
-
-`vercel.json` に以下設定済みです。
-
-- `0 21 * * *` (UTC) = 毎日06:00 JST
-
-## ローカル実行
+## Local Run
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-## 動作確認
+## Build / Start
 
-1. LINE DevelopersでWebhook URLを `https://<your-domain>/api/webhook` に設定
-2. Webhook有効化
-3. Supabaseに `questions` を投入
-4. `POST /api/push/daily` を手動実行して配信確認
-5. LINEで回答し、即時返信の進捗表示を確認
+```bash
+npm run build
+npm start
+```
+
+## Render Setup
+
+Web Service:
+- Build Command: `npm ci && npm run build`
+- Start Command: `npm start`
+- Health Check Path: `/health`
+
+Cron:
+- 毎日 06:00 JST で `POST https://<your-service>.onrender.com/push/daily`
+- `CRON_SECRET` を設定した場合は `Authorization: Bearer <CRON_SECRET>` を付与
+
+## Notes
+
+- 署名検証は raw body 前提です。`express.json({ verify })` で保持しています。
+- `SUPABASE_SERVICE_ROLE_KEY` はサーバー専用で扱い、クライアントに露出しません。
+- DBスキーマは `db/schema.sql` を利用してください。

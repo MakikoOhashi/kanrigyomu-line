@@ -5,7 +5,7 @@ create table if not exists public.users (
   line_user_id text not null unique,
   created_at timestamptz not null default now(),
   current_block int not null default 1 check (current_block >= 1),
-  cursor_in_block int not null default 0 check (cursor_in_block >= 0),
+  cursor_in_block int not null default 1 check (cursor_in_block >= 1),
   streak_count int not null default 0 check (streak_count >= 0),
   last_answer_date date,
   last_sent_date date,
@@ -15,7 +15,7 @@ create table if not exists public.users (
 create table if not exists public.questions (
   id uuid primary key default gen_random_uuid(),
   block_number int not null check (block_number >= 1),
-  order_index int not null check (order_index >= 0),
+  order_index int not null check (order_index >= 1),
   stem text not null,
   c1 text not null,
   c2 text not null,
@@ -45,7 +45,6 @@ create table if not exists public.daily_assignments (
   question_id uuid references public.questions(id) on delete set null,
   sent_at timestamptz,
   answered_at timestamptz,
-  status text not null check (status in ('sent', 'answered', 'skipped')),
   created_at timestamptz not null default now(),
   unique (user_id, date)
 );
