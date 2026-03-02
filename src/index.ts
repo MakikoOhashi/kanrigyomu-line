@@ -1,7 +1,6 @@
 import express from "express";
 import webhookRouter from "./routes/webhook";
 import pushDailyRouter from "./routes/pushDaily";
-import { assertRequiredEnv } from "./lib/env";
 
 const app = express();
 
@@ -21,8 +20,6 @@ app.use(webhookRouter);
 app.use(pushDailyRouter);
 
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
-
-assertRequiredEnv();
 
 app.listen(port, () => {
   // eslint-disable-next-line no-console

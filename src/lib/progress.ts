@@ -4,7 +4,7 @@ import type { QuestionRow, UserRow } from "../types";
 
 export async function findOrCreateUser(supabase: SupabaseClient, lineUserId: string): Promise<UserRow> {
   const { data: existing, error: findError } = await supabase
-    .from("users")
+    .from("kanrigyomu_users")
     .select("*")
     .eq("line_user_id", lineUserId)
     .maybeSingle<UserRow>();
@@ -18,7 +18,7 @@ export async function findOrCreateUser(supabase: SupabaseClient, lineUserId: str
   }
 
   const { data, error } = await supabase
-    .from("users")
+    .from("kanrigyomu_users")
     .insert({ line_user_id: lineUserId, current_block: 1, cursor_in_block: 1, streak_count: 0, active: true })
     .select("*")
     .single<UserRow>();
@@ -32,7 +32,7 @@ export async function findOrCreateUser(supabase: SupabaseClient, lineUserId: str
 
 export async function getQuestionById(supabase: SupabaseClient, questionId: string): Promise<QuestionRow> {
   const { data, error } = await supabase
-    .from("questions")
+    .from("kanrigyomu_questions")
     .select("*")
     .eq("id", questionId)
     .single<QuestionRow>();
@@ -72,7 +72,7 @@ export async function updateAfterAnswer(
   const nextBlock = Math.max(user.current_block, question.block_number);
 
   const { data, error } = await supabase
-    .from("users")
+    .from("kanrigyomu_users")
     .update({
       current_block: nextBlock,
       cursor_in_block: nextCursor,
@@ -97,7 +97,7 @@ export async function insertAnswer(
   selected: number,
   isCorrect: boolean,
 ): Promise<void> {
-  const { error } = await supabase.from("answers").insert({
+  const { error } = await supabase.from("kanrigyomu_answers").insert({
     user_id: userId,
     question_id: questionId,
     selected,
@@ -115,7 +115,7 @@ export async function markAssignmentAnswered(
   questionId: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("daily_assignments")
+    .from("kanrigyomu_daily_assignments")
     .update({ answered_at: new Date().toISOString() })
     .eq("user_id", userId)
     .eq("question_id", questionId)
@@ -136,7 +136,7 @@ export async function getBlockCorrectRate(
   blockNumber: number,
 ): Promise<number> {
   const { data, error } = await supabase
-    .from("answers")
+    .from("kanrigyomu_answers")
     .select("is_correct, questions!inner(block_number)")
     .eq("user_id", userId)
     .eq("questions.block_number", blockNumber)
@@ -163,8 +163,8 @@ export async function getProgressSnapshot(
 ): Promise<{ blockProgress: number; blockTotal: number; blockRate: number; totalAnswered: number }> {
   const [{ count: blockTotal, error: blockTotalError }, { count: totalAnswered, error: totalError }, blockRate] =
     await Promise.all([
-      supabase.from("questions").select("id", { head: true, count: "exact" }).eq("block_number", blockNumber),
-      supabase.from("answers").select("id", { head: true, count: "exact" }).eq("user_id", userId),
+      supabase.from("kanrigyomu_questions").select("id", { head: true, count: "exact" }).eq("block_number", blockNumber),
+      supabase.from("kanrigyomu_answers").select("id", { head: true, count: "exact" }).eq("user_id", userId),
       getBlockCorrectRate(supabase, userId, blockNumber),
     ]);
 

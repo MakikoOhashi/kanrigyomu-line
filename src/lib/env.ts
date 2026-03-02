@@ -20,3 +20,7 @@ export function assertRequiredEnv(): void {
     requireEnv(key);
   }
 }
+
+export function getMissingRequiredEnv(): string[] {
+  return REQUIRED_ENV_KEYS.filter((key) => !process.env[key]);
+}

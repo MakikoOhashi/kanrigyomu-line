@@ -22,7 +22,7 @@ function authorized(req: Request): boolean {
 
 async function getActiveUsers(): Promise<UserRow[]> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.from("users").select("*").eq("active", true).returns<UserRow[]>();
+  const { data, error } = await supabase.from("kanrigyomu_users").select("*").eq("active", true).returns<UserRow[]>();
 
   if (error) {
     throw new Error(`Failed to fetch active users: ${error.message}`);
@@ -49,7 +49,7 @@ router.post("/push/daily", async (req, res) => {
 
     for (const user of users) {
       const { data: existing, error: assignmentErr } = await supabase
-        .from("daily_assignments")
+        .from("kanrigyomu_daily_assignments")
         .select("id")
         .eq("user_id", user.id)
         .eq("date", today)
@@ -67,7 +67,7 @@ router.post("/push/daily", async (req, res) => {
       const assignment = await resolveAssignment(supabase, user);
       if (!assignment.question) {
         skipped += 1;
-        await supabase.from("daily_assignments").upsert(
+        await supabase.from("kanrigyomu_daily_assignments").upsert(
           { user_id: user.id, date: today, question_id: null, sent_at: new Date().toISOString() },
           { onConflict: "user_id,date" },
         );
@@ -76,7 +76,7 @@ router.post("/push/daily", async (req, res) => {
 
       if (assignment.block !== user.current_block || assignment.cursor !== user.cursor_in_block) {
         const { error: updateErr } = await supabase
-          .from("users")
+          .from("kanrigyomu_users")
           .update({ current_block: assignment.block, cursor_in_block: assignment.cursor })
           .eq("id", user.id);
 
@@ -87,7 +87,7 @@ router.post("/push/daily", async (req, res) => {
 
       await pushMessage(user.line_user_id, [buildQuestionMessage(assignment.question)]);
 
-      const { error: upsertErr } = await supabase.from("daily_assignments").upsert(
+      const { error: upsertErr } = await supabase.from("kanrigyomu_daily_assignments").upsert(
         {
           user_id: user.id,
           date: today,

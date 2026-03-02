@@ -12,7 +12,7 @@ type Assignment = {
 
 async function findQuestion(supabase: SupabaseClient, block: number, cursor: number): Promise<QuestionRow | null> {
   const { data, error } = await supabase
-    .from("questions")
+    .from("kanrigyomu_questions")
     .select("*")
     .eq("block_number", block)
     .eq("order_index", cursor)
@@ -27,7 +27,7 @@ async function findQuestion(supabase: SupabaseClient, block: number, cursor: num
 
 async function blockExists(supabase: SupabaseClient, block: number): Promise<boolean> {
   const { count, error } = await supabase
-    .from("questions")
+    .from("kanrigyomu_questions")
     .select("id", { count: "exact", head: true })
     .eq("block_number", block);
 
