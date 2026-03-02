@@ -1,6 +1,21 @@
 import type { LineTextMessage, QuestionRow } from "../types";
 
 const CHOICES = ["①", "②", "③", "④"];
+const BLOCK_THEMES: Record<number, string> = {
+  1: "民法",
+  2: "区分所有法",
+  3: "建替え",
+  4: "適正化法",
+  5: "設備・維持保全",
+};
+
+function blockLabel(blockNumber: number): string {
+  const theme = BLOCK_THEMES[blockNumber];
+  if (!theme) {
+    return `Block${blockNumber}`;
+  }
+  return `Block${blockNumber}(${theme})`;
+}
 
 function toPercent(value: number): number {
   if (!Number.isFinite(value)) {
@@ -13,7 +28,7 @@ export function buildQuestionMessage(question: QuestionRow): LineTextMessage {
   return {
     type: "text",
     text: [
-      `【Block ${question.block_number}】`,
+      `【${blockLabel(question.block_number)}】`,
       question.stem,
       `① ${question.c1}`,
       `② ${question.c2}`,
@@ -55,12 +70,34 @@ export function buildAnswerMessage(params: {
       `あなたの回答：${CHOICES[params.selected - 1] ?? params.selected}`,
       `理由：${params.explanation}`,
       "",
-      `Block${params.blockNumber}：${params.blockProgress}/${params.blockTotal}`,
+      `${blockLabel(params.blockNumber)}：${params.blockProgress}/${params.blockTotal}`,
       `Block正答率：${toPercent(params.blockRate)}%`,
       `総進捗：${params.totalAnswered}/${params.totalQuestions}（${toPercent(
         params.totalAnswered / Math.max(1, params.totalQuestions),
       )}%）`,
       `連続：${params.streakCount}日`,
     ].join("\n"),
+    quickReply: {
+      items: [
+        {
+          type: "action",
+          action: {
+            type: "postback",
+            label: "もう一問",
+            data: "action=next",
+            displayText: "もう一問解く",
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "postback",
+            label: "やめとく",
+            data: "action=stop",
+            displayText: "やめとく",
+          },
+        },
+      ],
+    },
   };
 }

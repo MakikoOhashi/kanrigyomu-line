@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { replyMessage } from "../lib/lineClient";
-import { buildAnswerMessage } from "../lib/messages";
+import { buildAnswerMessage, buildQuestionMessage } from "../lib/messages";
 import { getSupabase } from "../lib/supabase";
 import { verifyLineSignature } from "../lib/lineSignature";
 import { requireEnv } from "../lib/env";
+import { resolveAssignment } from "../lib/assign";
 import {
   findOrCreateUser,
   getProgressSnapshot,
@@ -60,8 +61,38 @@ router.post("/webhook", async (req, res) => {
       }
 
       const payload = new URLSearchParams(event.postback?.data ?? "");
+      const action = payload.get("action");
       const questionId = payload.get("qid");
       const selected = parseChoice(payload.get("c"));
+
+      if (action === "next") {
+        const user = await findOrCreateUser(supabase, lineUserId);
+        const assignment = await resolveAssignment(supabase, user);
+
+        if (!assignment.question) {
+          await replyMessage(event.replyToken, [{ type: "text", text: "出題できる問題がありません。" }]);
+          continue;
+        }
+
+        if (assignment.block !== user.current_block || assignment.cursor !== user.cursor_in_block) {
+          const { error: updateErr } = await supabase
+            .from("kanrigyomu_users")
+            .update({ current_block: assignment.block, cursor_in_block: assignment.cursor })
+            .eq("id", user.id);
+
+          if (updateErr) {
+            throw new Error(`Failed to align user cursor: ${updateErr.message}`);
+          }
+        }
+
+        await replyMessage(event.replyToken, [buildQuestionMessage(assignment.question)]);
+        continue;
+      }
+
+      if (action === "stop") {
+        await replyMessage(event.replyToken, [{ type: "text", text: "了解です。また明日の1問で進めましょう。" }]);
+        continue;
+      }
 
       if (!questionId || !selected) {
         await replyMessage(event.replyToken, [{ type: "text", text: "回答データが不正です。" }]);
