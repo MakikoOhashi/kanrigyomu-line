@@ -137,9 +137,9 @@ export async function getBlockCorrectRate(
 ): Promise<number> {
   const { data, error } = await supabase
     .from("kanrigyomu_answers")
-    .select("is_correct, questions!inner(block_number)")
+    .select("is_correct, kanrigyomu_questions!inner(block_number)")
     .eq("user_id", userId)
-    .eq("questions.block_number", blockNumber)
+    .eq("kanrigyomu_questions.block_number", blockNumber)
     .returns<BlockJoinRow[]>();
 
   if (error) {
