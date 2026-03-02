@@ -31,6 +31,30 @@ async function getActiveUsers(): Promise<UserRow[]> {
   return data ?? [];
 }
 
+async function reserveDailyAssignment(params: {
+  userId: string;
+  date: string;
+  questionId: string | null;
+}): Promise<boolean> {
+  const supabase = getSupabase();
+  const { error } = await supabase.from("kanrigyomu_daily_assignments").insert({
+    user_id: params.userId,
+    date: params.date,
+    question_id: params.questionId,
+    sent_at: new Date().toISOString(),
+  });
+
+  if (!error) {
+    return true;
+  }
+
+  if (error.code === "23505") {
+    return false;
+  }
+
+  throw new Error(`Failed to reserve daily assignment: ${error.message}`);
+}
+
 router.post("/push/daily", async (req, res) => {
   try {
     if (!authorized(req)) {
@@ -48,29 +72,28 @@ router.post("/push/daily", async (req, res) => {
     }
 
     for (const user of users) {
-      const { data: existing, error: assignmentErr } = await supabase
-        .from("kanrigyomu_daily_assignments")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("date", today)
-        .maybeSingle<{ id: string }>();
-
-      if (assignmentErr) {
-        throw new Error(`Failed to check daily assignment: ${assignmentErr.message}`);
-      }
-
-      if (existing) {
+      const assignment = await resolveAssignment(supabase, user);
+      if (!assignment.question) {
+        const reserved = await reserveDailyAssignment({
+          userId: user.id,
+          date: today,
+          questionId: null,
+        });
         skipped += 1;
+        if (!reserved) {
+          continue;
+        }
         continue;
       }
 
-      const assignment = await resolveAssignment(supabase, user);
-      if (!assignment.question) {
+      const reserved = await reserveDailyAssignment({
+        userId: user.id,
+        date: today,
+        questionId: assignment.question.id,
+      });
+
+      if (!reserved) {
         skipped += 1;
-        await supabase.from("kanrigyomu_daily_assignments").upsert(
-          { user_id: user.id, date: today, question_id: null, sent_at: new Date().toISOString() },
-          { onConflict: "user_id,date" },
-        );
         continue;
       }
 
@@ -86,20 +109,6 @@ router.post("/push/daily", async (req, res) => {
       }
 
       await pushMessage(user.line_user_id, [buildQuestionMessage(assignment.question)]);
-
-      const { error: upsertErr } = await supabase.from("kanrigyomu_daily_assignments").upsert(
-        {
-          user_id: user.id,
-          date: today,
-          question_id: assignment.question.id,
-          sent_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,date" },
-      );
-
-      if (upsertErr) {
-        throw new Error(`Failed to save daily assignment: ${upsertErr.message}`);
-      }
 
       sent += 1;
     }
