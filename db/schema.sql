@@ -8,6 +8,11 @@ create table if not exists public.kanrigyomu_users (
   cursor_in_block int not null default 1 check (cursor_in_block >= 1),
   streak_count int not null default 0 check (streak_count >= 0),
   last_answer_date date,
+  locale text not null default 'ja',
+  exam_type text not null default 'kanrigyomu',
+  plan text not null default 'free',
+  is_paid boolean not null default false,
+  timezone text not null default 'Asia/Tokyo',
   last_sent_date date,
   active boolean not null default true
 );
@@ -16,6 +21,9 @@ create table if not exists public.kanrigyomu_questions (
   id uuid primary key default gen_random_uuid(),
   block_number int not null check (block_number >= 1),
   order_index int not null check (order_index >= 1),
+  exam_type text not null default 'kanrigyomu',
+  difficulty int not null default 1 check (difficulty between 1 and 5),
+  tags text[] not null default '{}'::text[],
   stem text not null,
   c1 text not null,
   c2 text not null,
@@ -50,3 +58,6 @@ create table if not exists public.kanrigyomu_daily_assignments (
 );
 
 create index if not exists idx_kanrigyomu_questions_block_order on public.kanrigyomu_questions(block_number, order_index);
+create index if not exists idx_kanrigyomu_users_exam_type on public.kanrigyomu_users(exam_type);
+create index if not exists idx_kanrigyomu_questions_exam_type_block_order on public.kanrigyomu_questions(exam_type, block_number, order_index);
+create index if not exists idx_kanrigyomu_questions_tags on public.kanrigyomu_questions using gin(tags);
