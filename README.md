@@ -154,3 +154,12 @@ LIFFダッシュボード
 
 
 ---
+## 🌐 Deployment
+
+Production URL:
+https://kanrigyomu-line.vercel.app/
+
+Current Status:
+- Base Next.js app deployed
+- LINE integration pending
+- Supabase setup pending
