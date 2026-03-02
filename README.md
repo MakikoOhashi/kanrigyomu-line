@@ -1,165 +1,73 @@
-Line Study Bot (管理業務主任者 120問ブロック型)
-LINEで毎朝1問配信し、 1タップ回答 → 即正誤判定 → ブロック進捗・正答率表示まで行う学習ボット。
+# Line Study Bot (管理業務主任者)
 
-🎯 目的
-1日1問（6:00配信）
-固定順ブロック進行
-ブロック内進捗％表示
-ブロック正答率表示
-全体進捗表示
-連続日数カウント
-🏗 アーキテクチャ
-LINE Official Account
-↓ (Webhook)
-Vercel (Next.js API Routes)
-↓
-Supabase (DB)
+LINEで毎朝1問を配信し、回答後に即時で正誤と進捗を返す学習ボットです。
 
-Vercel Cron（毎朝6:00に /api/push/daily 実行）
-📦 技術スタック
-Next.js (TypeScript)
-Vercel
-Supabase
-LINE Messaging API
-🔐 必要な環境変数
-VercelのEnvironment Variablesに設定すること。
+## Stack
 
-LINE_CHANNEL_ACCESS_TOKEN= LINE_CHANNEL_SECRET=
+- Next.js App Router + TypeScript
+- Vercel (API + Cron)
+- Supabase (Postgres)
+- LINE Messaging API
 
-SUPABASE_URL= SUPABASE_SERVICE_ROLE_KEY=
+## 実装済みAPI
 
-TZ=Asia/Tokyo
+- `POST /api/webhook`
+  - `x-line-signature` を `HMAC-SHA256 + Base64` で検証
+  - `follow` を受けてユーザー登録
+  - `postback (qid,c)` を受けて回答保存・進捗更新・即時返信
+- `POST /api/push/daily`
+  - JST日付で `daily_assignments(user_id,date)` を使った冪等配信
+  - 固定順 (`block_number`, `order_index`) で問題決定
+  - ブロック末尾で正答率70%以上なら次ブロック、未満なら同ブロック再周回
 
-🗂 ディレクトリ構成（想定）
-/app /api /webhook/route.ts /push/daily/route.ts
+## 必須環境変数
 
-/lib /line.ts /supabase.ts /progress.ts /questions.ts
+```bash
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_CHANNEL_SECRET=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
-🗃 DB設計（Supabase）
-1. users
-column	type
-id	uuid (PK)
-line_user_id	text
-current_block	int
-current_question_index	int
-streak_count	int
-last_answer_date	date
-2. questions
-column	type
-id	uuid
-block_number	int
-order_index	int
-question_text	text
-choice_1	text
-choice_2	text
-choice_3	text
-choice_4	text
-correct_choice	int
-explanation	text
-3. answers
-column	type
-id	uuid
-user_id	uuid
-question_id	uuid
-selected_choice	int
-is_correct	boolean
-answered_at	timestamp
-🔁 出題ロジック
-固定順
-ブロック内 order_index 昇順
-ブロック終了 → 次ブロックへ
-ブロック正答率 70%未満なら同ブロック再周回
-⏰ Cron設定（Vercel）
-vercel.json:
+任意:
 
-{
-  "crons": [
-    {
-      "path": "/api/push/daily",
-      "schedule": "0 21 * * *"
-    }
-  ]
-}
+```bash
+# Cronエンドポイント保護（設定時のみ必須化）
+CRON_SECRET=
+# usersが空の場合の初期配信先
+DEFAULT_LINE_USER_ID=
+```
 
-※ UTC基準
-6:00 JST = 21:00 UTC（前日）
+## DBセットアップ
 
-📩 LINE設定手順
+Supabase SQL Editorで次を実行:
 
-LINE公式アカウント作成
+- `db/schema.sql`
 
-Messaging APIチャネル作成
+テーブル:
 
-Channel Access Token発行
+- `users`
+- `questions`
+- `answers`
+- `daily_assignments`
 
-Webhook URLに以下を設定
+## Vercel Cron
 
+`vercel.json` に以下設定済みです。
 
-https://your-app.vercel.app/api/webhook
+- `0 21 * * *` (UTC) = 毎日06:00 JST
 
+## ローカル実行
 
-Webhook有効化
+```bash
+npm install
+npm run dev
+```
 
-📊 返信フォーマット例
-✅ 正解：③
-理由：重要行為は同意必要→違反は取消可能
+## 動作確認
 
-Block1：12/30（40%）
-Block正答率：67%
-総進捗：12/120（10%）
-連続：3日
-🚀 開発手順
-
-Private repo 作成
-
-Next.js (TypeScript) 初期化
-
-Supabaseプロジェクト作成
-
-VercelにImport
-
-環境変数設定
-
-Webhook動作確認
-
-Cron確認
-
-🧠 設計思想
-
-長文を読ませない
-
-10秒で終わる問題
-
-圧をかけない進捗表示
-
-「理解」より「慣れ」を優先
-
-🔒 セキュリティ注意
-
-.env は絶対にコミットしない
-
-Service Role Keyはサーバ側のみ使用
-
-Webhook署名検証を必ず実装する
-
-🧭 今後の拡張
-
-ブロック別苦手分析
-
-自動復習問題挿入
-
-LIFFダッシュボード
-
-管理者画面
-
-
----
-## 🌐 Deployment
-
-Production URL:
-https://kanrigyomu-line.vercel.app/
-
-Current Status:
-- Base Next.js app deployed
-- LINE integration pending
-- Supabase setup pending
+1. LINE DevelopersでWebhook URLを `https://<your-domain>/api/webhook` に設定
+2. Webhook有効化
+3. Supabaseに `questions` を投入
+4. `POST /api/push/daily` を手動実行して配信確認
+5. LINEで回答し、即時返信の進捗表示を確認
