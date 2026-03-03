@@ -1,88 +1,32 @@
-# LINE Study Bot (Render + Express + TypeScript)
+# kanrigyomu-line (Archive)
 
-Render上で動く、管理業務主任者向けのLINE日次1問ボットです。
+本リポジトリは移行元（Render + Express）のアーカイブです。
 
-## Current Status (2026-03-02)
+## 移行ステータス
 
-- Renderデプロイ済み（`/health` 200確認済み）
-- Supabase接続済み
-- LINE Messaging API連携済み（Webhook Verify Success）
-- `follow` イベントで `kanrigyomu_users` への登録確認済み
-- `POST /push/daily` 実行で配信確認済み
-- LINE回答（postback）で `kanrigyomu_answers` 記録・即時返信確認済み
+- 本番運用先: `common-ai-api`（Cloudflare Workers）
+- 本番Webhook: `https://common-ai-api.makiron19831014.workers.dev/webhook`
+- 本番日次配信: `https://common-ai-api.makiron19831014.workers.dev/push/daily`
 
-## Endpoints
+## このリポジトリの扱い
 
-- `POST /webhook`
-  - LINEのWebhook受信
-  - `x-line-signature` を raw body で検証
-  - `follow` でユーザー登録
-  - `postback(qid,c)` で回答保存・進捗計算・即時返信
-- `POST /push/daily`
-  - 日次配信
-  - `kanrigyomu_daily_assignments(user_id,date)` で冪等性担保
-  - 固定順（`block_number`, `order_index`）で出題
-- `GET /health`
-  - ヘルスチェック
+- 履歴参照用として保持
+- 原則として新機能追加は行わない
+- 本番設定の変更先は `common-ai-api` 側
 
-## Required Environment Variables
+## 参照用途
 
-```bash
-PORT=3000
-TZ=Asia/Tokyo
-LINE_CHANNEL_ACCESS_TOKEN=
-LINE_CHANNEL_SECRET=
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-```
+- 旧Express実装の構成確認
+- Supabaseスキーマ確認（`db/schema.sql`）
+- 過去の運用ログや設計意図の参照
 
-Optional:
+## 旧構成（参考）
 
-```bash
-CRON_SECRET=
-DEFAULT_LINE_USER_ID=
-```
+- Runtime: Node.js + Express
+- Deploy: Render
+- API: `POST /webhook`, `POST /push/daily`, `GET /health`
 
-## Supabase Tables
+## 注意
 
-- `kanrigyomu_users`
-- `kanrigyomu_questions`
-- `kanrigyomu_answers`
-- `kanrigyomu_daily_assignments`
-
-## Local Run
-
-```bash
-npm ci
-npm run dev
-```
-
-## Build / Start
-
-```bash
-npm run build
-npm start
-```
-
-## Render Setup
-
-Web Service:
-- Build Command: `npm ci && npm run build`
-- Start Command: `npm start`
-- Health Check Path: `/health`
-
-Cron:
-- 毎日 06:00 JST で `POST https://<your-service>.onrender.com/push/daily`
-- `CRON_SECRET` を設定した場合は `Authorization: Bearer <CRON_SECRET>` を付与
-
-## Next Steps
-
-- Render Cronの定時実行設定（06:00 JST）
-- `kanrigyomu_questions` へ本番問題（120問）投入
-- 必要に応じて `DEFAULT_LINE_USER_ID` を削除（本番は `follow` 登録ユーザー配信が基本）
-
-## Notes
-
-- 署名検証は raw body 前提です。`express.json({ verify })` で保持しています。
-- `SUPABASE_SERVICE_ROLE_KEY` はサーバー専用で扱い、クライアントに露出しません。
-- DBスキーマは `db/schema.sql` を利用してください。
+このリポジトリ単体では現行本番に反映されません。
+本番反映は `common-ai-api` 側で実施してください。
