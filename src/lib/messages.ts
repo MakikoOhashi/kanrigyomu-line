@@ -1,6 +1,6 @@
 import type { LineTextMessage, QuestionRow } from "../types";
 
-const CHOICES = ["①", "②", "③", "④"];
+const CHOICES = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"];
 const BLOCK_THEMES: Record<number, string> = {
   1: "民法",
   2: "区分所有法",
