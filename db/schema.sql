@@ -14,6 +14,8 @@ create table if not exists public.kanrigyomu_users (
   is_paid boolean not null default false,
   timezone text not null default 'Asia/Tokyo',
   last_sent_date date,
+  roadmap_last_sent_date date,
+  roadmap_cycle_count int not null default 0 check (roadmap_cycle_count >= 0),
   active boolean not null default true
 );
 
